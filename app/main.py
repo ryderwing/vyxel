@@ -466,8 +466,16 @@ async def apple_cb(
 @app.get('/api/dashboard',response_class=HTMLResponse)
 def dashboard(req:Request,u:User=Depends(require_user),db:Session=Depends(get_db)):
     q=db.query(Ticket).filter(Ticket.status!='deleted')
-    if u.role=='client':q=q.filter(Ticket.owner_user_id==u.id)
-    elif u.role=='pentester':q=q.filter(Ticket.assigned_pentester_id==u.id)
+
+    if u.role=='client':
+        # Clients only see tickets they personally created.
+        q=q.filter(Ticket.owner_user_id==u.id)
+
+    elif u.role=='pentester':
+        # Pentesters only see tickets assigned to them.
+        q=q.filter(Ticket.assigned_pentester_id==u.id)
+
+    # Owners intentionally keep the unfiltered query and can see all tickets.
     tickets=q.order_by(Ticket.updated_at.desc()).all()
     return templates.TemplateResponse('dashboard.html',{'request':req,'user':u,'tickets':tickets,'csrf':csrf(req),'app_name':APP_NAME})
 @app.post('/api/tickets')
