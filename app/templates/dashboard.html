@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="dashboard-shell">
+  <div class="dashboard-topbar">
+    <div>
+      <div class="dashboard-brand">VYXEL</div>
+      <div class="dashboard-user">{{ user.display_name }}</div>
+    </div>
+
+    <form method="post" action="/api/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button class="logout-btn" type="submit">Log out</button>
+    </form>
+  </div>
+
+  {% if user.role == 'client' %}
+  <div class="card">
+    <h2>Create Ticket</h2>
+
+    <form method="post" action="/api/tickets">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+      <label>Title</label>
+      <input name="title" maxlength="160" placeholder="Your title" required>
+
+      <label>Target</label>
+      <input name="target" maxlength="255" placeholder="Game, website, other" required>
+
+      <label>Scope</label>
+      <textarea name="scope" rows="6" placeholder="Describe what you need" required></textarea>
+
+      <label class="check-row">
+        <input type="checkbox" name="authorization_confirmed" value="yes" required>
+        <span>I confirm I am authorized to request this work.</span>
+      </label>
+
+      <button type="submit">Create Ticket</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="section-head">
+      <h2>Tickets</h2>
+      {% if user.role == 'pentester' %}
+      <span class="role-badge">Pentester</span>
+      {% elif user.role == 'owner' %}
+      <span class="role-badge">Owner</span>
+      {% endif %}
+    </div>
+
+    {% if tickets %}
+      <div class="ticket-list">
+        {% for ticket in tickets %}
+          <a class="ticket-row" href="/api/tickets/{{ ticket.id }}">
+            <div>
+              <div class="ticket-title">{{ ticket.title }}</div>
+              <div class="ticket-target">{{ ticket.target }}</div>
+            </div>
+            <span class="status-pill">{{ ticket.status }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No tickets yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
