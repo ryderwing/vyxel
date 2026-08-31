@@ -134,20 +134,22 @@ def require_user(req:Request,db:Session=Depends(get_db)):
 
 def visible(u,t):return u.role=='owner' or (u.role=='pentester' and t.assigned_pentester_id==u.id) or t.owner_user_id==u.id
 
-@app.get('/',response_class=HTMLResponse)
-def home(req:Request,db:Session=Depends(get_db)):
-    u=current_user(req,db)
-    if u:
-        return RedirectResponse('/dashboard',303)
+@app.get("/", response_class=HTMLResponse)
+def home(req: Request, db: Session = Depends(get_db)):
+    user = current_user(req, db)
+
+    if user:
+        return RedirectResponse("/dashboard", status_code=303)
+
     return templates.TemplateResponse(
-        'login.html',
+        "login.html",
         {
-            'request':req,
-            'csrf':csrf(req),
-            'app_name':APP_NAME,
-            'google_enabled':False,
-            'apple_enabled':False
-        }
+            "request": req,
+            "csrf": csrf(req),
+            "app_name": "Vyxel",
+            "google_enabled": False,
+            "apple_enabled": False,
+        },
     )
 @app.get('/register',response_class=HTMLResponse)
 def register_page(req:Request):return templates.TemplateResponse('register.html',{'request':req,'csrf':csrf(req),'app_name':APP_NAME})
