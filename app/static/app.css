@@ -235,3 +235,130 @@ pre{white-space:pre-wrap}
   color:var(--red);
   font-weight:800;
 }
+
+.dashboard-shell{
+  max-width:1100px;
+  margin:0 auto;
+  padding:28px 18px;
+}
+
+.dashboard-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:22px;
+}
+
+.dashboard-brand{
+  color:var(--red);
+  font-size:13px;
+  font-weight:900;
+  letter-spacing:5px;
+  margin-bottom:3px;
+}
+
+.dashboard-user{
+  font-size:26px;
+  font-weight:800;
+  color:var(--text);
+}
+
+.logout-btn{
+  width:auto;
+  margin:0;
+  padding:10px 16px;
+  background:#141416;
+  border-color:#303035;
+}
+
+.logout-btn:hover{
+  background:#1d1d20;
+  border-color:var(--red);
+}
+
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.section-head h2{
+  margin:0;
+}
+
+.role-badge{
+  color:#fff;
+  background:rgba(225,29,46,.16);
+  border:1px solid rgba(225,29,46,.45);
+  border-radius:999px;
+  padding:5px 10px;
+  font-size:12px;
+  font-weight:800;
+  text-transform:capitalize;
+}
+
+.ticket-list{
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+}
+
+.ticket-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#09090b;
+}
+
+.ticket-row:hover{
+  border-color:var(--red);
+}
+
+.ticket-title{
+  font-weight:800;
+  margin-bottom:2px;
+}
+
+.ticket-target{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.status-pill{
+  flex:0 0 auto;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:5px 9px;
+  color:#d8d8dc;
+  font-size:12px;
+  text-transform:capitalize;
+}
+
+.empty-state{
+  color:var(--muted);
+  padding:12px 0 4px;
+}
+
+.check-row{
+  display:flex;
+  align-items:flex-start;
+  gap:9px;
+  color:#c8c8ce;
+}
+
+.check-row input{
+  width:auto;
+  margin-top:3px;
+}
+
+@media(max-width:650px){
+  .dashboard-user{font-size:22px}
+  .dashboard-topbar{align-items:flex-start}
+}
