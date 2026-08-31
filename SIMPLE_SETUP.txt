@@ -1,0 +1,54 @@
+PENTESTHUB SIMPLE SETUP
+
+UPLOAD TO GITHUB ROOT:
+app/
+owner_panel/
+.env.example
+.gitignore
+requirements.txt
+README.md
+SIMPLE_SETUP.txt
+vercel.json
+
+DO NOT UPLOAD:
+.env
+owner_panel/config.json
+__pycache__/
+*.pyc
+
+VERCEL:
+Preset: FastAPI
+Root Directory: ./
+Build Command: None
+Output Directory: N/A
+Install Command: pip install -r requirements.txt
+
+ONLY 4 ENVIRONMENT VARIABLES:
+DATABASE_URL
+SECRET_KEY
+OWNER_EMAIL
+OWNER_PASSWORD
+
+DATABASE_URL:
+Use your Neon PostgreSQL URL.
+If it starts with:
+postgresql://
+change it to:
+postgresql+psycopg://
+
+SECRET_KEY:
+Use one long random value.
+
+OWNER_EMAIL:
+Your owner account email.
+
+OWNER_PASSWORD:
+Your owner password, at least 12 characters.
+
+Google and Apple login are disabled in this simple first version.
+
+OWNER PANEL:
+Copy owner_panel/config.example.json to owner_panel/config.json.
+Put your real Vercel URL inside it.
+Run BUILD_EXE.bat.
+Open the EXE and sign in using OWNER_EMAIL and OWNER_PASSWORD.
