@@ -1,1 +1,158 @@
-{% extends 'base.html' %}{% block content %}<div class='tickethead'><div><small>TICKET #{{ ticket.id }}</small><h1>{{ ticket.title }}</h1><p>{{ ticket.target }}</p></div><b>{{ ticket.status }}</b></div><section class='card'><h2>Authorized scope</h2><pre>{{ ticket.scope }}</pre></section>{% if user.role in ['pentester','owner'] %}<section class='card'><h2>Staff controls</h2>{% if user.role=='owner' %}<form method='post' action='/tickets/{{ ticket.id }}/action'><input type='hidden' name='csrf_token' value='{{ csrf }}'><input type='hidden' name='action' value='assign'><select name='value'><option value=''>Unassigned</option>{% for p in pentesters %}<option value='{{ p.id }}'>{{ p.display_name }} · {{ p.role }}</option>{% endfor %}</select><button>Assign</button></form>{% endif %}<div class='actions'>{% for a in ['in_progress','close','archive','report','delete'] %}<form method='post' action='/tickets/{{ ticket.id }}/action'><input type='hidden' name='csrf_token' value='{{ csrf }}'><input type='hidden' name='action' value='{{ a }}'>{% if a=='report' %}<input name='value' placeholder='Reason' required>{% endif %}<button>{{ a }}</button></form>{% endfor %}</div></section>{% endif %}<section class='card'><h2>Engagement chat</h2><div class='messages'>{% for m in messages %}<div class='msg'><b>{{ users[m.sender_user_id].display_name if m.sender_user_id in users else 'User' }}</b><p>{{ m.content }}</p><small>{{ m.created_at }} UTC</small></div>{% else %}<p>No messages yet.</p>{% endfor %}</div>{% if ticket.status not in ['archived','deleted'] %}<form method='post' action='/tickets/{{ ticket.id }}/messages'><input type='hidden' name='csrf_token' value='{{ csrf }}'><textarea name='content' rows='4' maxlength='8000' placeholder='Message client/staff...' required></textarea><button class='btn'>Send</button></form>{% endif %}</section>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="ticket-page">
+
+  <div class="ticket-info-panel">
+    <div class="ticket-info-top">
+      <div>
+        <div class="ticket-number">TICKET #{{ ticket.id }}</div>
+        <h1>{{ ticket.title }}</h1>
+      </div>
+
+      <span class="status-pill ticket-status">{{ ticket.status }}</span>
+    </div>
+
+    <div class="ticket-meta-grid">
+      <div class="ticket-meta-item">
+        <span class="meta-label">Target</span>
+        <span class="meta-value">{{ ticket.target }}</span>
+      </div>
+
+      <div class="ticket-meta-item">
+        <span class="meta-label">Status</span>
+        <span class="meta-value">{{ ticket.status }}</span>
+      </div>
+
+      <div class="ticket-meta-item">
+        <span class="meta-label">Ticket ID</span>
+        <span class="meta-value">#{{ ticket.id }}</span>
+      </div>
+
+      {% if ticket.assigned_pentester_id %}
+      <div class="ticket-meta-item">
+        <span class="meta-label">Assigned Pentester</span>
+        <span class="meta-value">User #{{ ticket.assigned_pentester_id }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="ticket-description">
+      <div class="description-title">Description</div>
+      <div class="description-text">{{ ticket.scope }}</div>
+    </div>
+  </div>
+
+  {% if user.role in ('owner','pentester') %}
+  <div class="ticket-staff-actions">
+    {% if user.role == 'owner' %}
+    <form method="post" action="/api/tickets/{{ ticket.id }}/action" class="inline-action">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="action" value="assign">
+
+      <select name="value">
+        <option value="">Unassigned</option>
+        {% for p in pentesters %}
+        <option value="{{ p.id }}" {% if ticket.assigned_pentester_id == p.id %}selected{% endif %}>
+          {{ p.display_name }}
+        </option>
+        {% endfor %}
+      </select>
+
+      <button type="submit">Assign</button>
+    </form>
+    {% endif %}
+
+    <div class="ticket-action-buttons">
+      <form method="post" action="/api/tickets/{{ ticket.id }}/action">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <input type="hidden" name="action" value="in_progress">
+        <button type="submit" class="secondary-btn">In Progress</button>
+      </form>
+
+      <form method="post" action="/api/tickets/{{ ticket.id }}/action">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <input type="hidden" name="action" value="close">
+        <button type="submit" class="secondary-btn">Close</button>
+      </form>
+
+      <form method="post" action="/api/tickets/{{ ticket.id }}/action">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <input type="hidden" name="action" value="archive">
+        <button type="submit" class="secondary-btn">Archive</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="ticket-chat">
+    <div class="chat-header">
+      <div>
+        <h2>Chat</h2>
+        <span>Ticket conversation</span>
+      </div>
+    </div>
+
+    <div class="chat-messages">
+      {% if messages %}
+        {% for msg in messages %}
+          {% set sender = users.get(msg.sender_user_id) %}
+          <div class="chat-message">
+            <div class="chat-avatar">
+              {{ (sender.display_name if sender else 'U')[0]|upper }}
+            </div>
+
+            <div class="chat-message-body">
+              <div class="chat-message-head">
+                <span class="chat-name">
+                  {{ sender.display_name if sender else ('User #' ~ msg.sender_user_id) }}
+                </span>
+
+                {% if sender and sender.role in ('owner','pentester') %}
+                  <span class="chat-role">{{ sender.role }}</span>
+                {% endif %}
+
+                <span class="chat-time">
+                  {{ msg.created_at.strftime('%b %d, %Y %I:%M %p') if msg.created_at else '' }}
+                </span>
+              </div>
+
+              <div class="chat-text">{{ msg.content }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="chat-empty">
+          No messages yet. Start the conversation below.
+        </div>
+      {% endif %}
+    </div>
+
+    {% if ticket.status not in ('archived','deleted') %}
+    <form method="post" action="/api/tickets/{{ ticket.id }}/messages" class="chat-input-wrap">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+      <textarea
+        name="content"
+        rows="2"
+        maxlength="8000"
+        placeholder="Chat"
+        required
+      ></textarea>
+
+      <button type="submit" class="chat-send">Send</button>
+    </form>
+    {% else %}
+    <div class="chat-readonly">
+      This ticket is read-only.
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="ticket-back">
+    <a href="/api/dashboard">← Back to tickets</a>
+  </div>
+
+</div>
+
+{% endblock %}
