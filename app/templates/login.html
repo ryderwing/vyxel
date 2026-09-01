@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="login-page">
+  <div class="login-card">
+    <div class="brand">VYXEL</div>
+    <p class="subtitle">Sign in to your account</p>
+
+    <form method="post" action="/api/login" class="login-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" placeholder="name@example.com" autocomplete="email" required>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" placeholder="Password" autocomplete="current-password" required>
+
+      <button type="submit">Sign in</button>
+    </form>
+
+    <div class="divider"><span>or</span></div>
+
+    <div class="social-grid">
+      <a class="social {% if not google_enabled %}disabled{% endif %}" href="{% if google_enabled %}/api/auth/google{% else %}#{% endif %}">Google</a>
+      <a class="social {% if not apple_enabled %}disabled{% endif %}" href="{% if apple_enabled %}/api/auth/apple{% else %}#{% endif %}">Apple</a>
+      <a class="social {% if not github_enabled %}disabled{% endif %}" href="{% if github_enabled %}/api/auth/github{% else %}#{% endif %}">GitHub</a>
+      <a class="social {% if not microsoft_enabled %}disabled{% endif %}" href="{% if microsoft_enabled %}/api/auth/microsoft{% else %}#{% endif %}">Microsoft</a>
+    </div>
+
+    <p class="account-switch">Don't have an account? <a href="/api/register">Create one</a></p>
+  </div>
+</div>
+{% endblock %}
