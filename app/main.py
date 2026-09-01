@@ -474,7 +474,23 @@ def dashboard(req:Request,u:User=Depends(require_user),db:Session=Depends(get_db
         q=q.filter(Ticket.assigned_pentester_id==u.id)
 
     tickets=q.order_by(Ticket.updated_at.desc()).all()
-    return templates.TemplateResponse('dashboard.html',{'request':req,'user':u,'tickets':tickets,'csrf':csrf(req),'app_name':APP_NAME})
+
+    members=[]
+    if u.role=='owner':
+        members=db.query(User).order_by(User.created_at.desc()).all()
+
+    return templates.TemplateResponse(
+        'dashboard.html',
+        {
+            'request':req,
+            'user':u,
+            'tickets':tickets,
+            'members':members,
+            'config_owner_email':os.getenv('OWNER_EMAIL','').strip().lower(),
+            'csrf':csrf(req),
+            'app_name':APP_NAME
+        }
+    )
 @app.post('/api/tickets')
 def create_ticket(req:Request,title:str=Form(...),target:str=Form(...),scope:str=Form(...),authorization_confirmed:str|None=Form(None),csrf_token:str=Form(...),u:User=Depends(require_user),db:Session=Depends(get_db)):
     check_csrf(req,csrf_token)
@@ -725,6 +741,130 @@ def owner_tickets(actor:User=Depends(owner_auth),db:Session=Depends(get_db)):
         'assigned_pentester_id':t.assigned_pentester_id,
         'updated_at':t.updated_at.isoformat()
     } for t in db.query(Ticket).order_by(Ticket.updated_at.desc()).all()]
+
+
+@app.post('/api/owner/users/{uid}/action')
+def website_owner_user_action(
+    uid:int,
+    req:Request,
+    action:str=Form(...),
+    value:str|None=Form(None),
+    csrf_token:str=Form(...),
+    u:User=Depends(require_user),
+    db:Session=Depends(get_db)
+):
+    check_csrf(req,csrf_token)
+
+    if u.role!='owner':
+        raise HTTPException(403,'Owner only')
+
+    target=db.get(User,uid)
+    if not target:
+        raise HTTPException(404,'User not found')
+
+    main_email=os.getenv('OWNER_EMAIL','').strip().lower()
+    is_main_actor=(u.email or '').strip().lower()==main_email
+    is_main_target=(target.email or '').strip().lower()==main_email
+
+    if is_main_target and target.id!=u.id:
+        raise HTTPException(403,'Main owner account is protected')
+
+    if target.role=='owner' and not is_main_actor and target.id!=u.id:
+        raise HTTPException(403,'Only the main owner can manage another owner')
+
+    if action=='temp_ban':
+        minutes=max(1,min(int(value or 60),525600))
+        target.temp_banned_until=datetime.utcnow()+timedelta(minutes=minutes)
+
+    elif action=='remove_temp_ban':
+        target.temp_banned_until=None
+
+    elif action=='restrict':
+        target.is_restricted=True
+        target.restricted_reason=(value or 'Restricted by owner')[:255]
+
+    elif action=='unrestrict':
+        target.is_restricted=False
+        target.restricted_reason=None
+
+    elif action=='ip_ban':
+        ip=(target.last_ip or '').strip()
+        if not ip:
+            raise HTTPException(400,'User has no recorded IP')
+        row=db.query(IPBan).filter(IPBan.ip==ip).first() or IPBan(ip=ip)
+        db.add(row)
+        row.reason='Banned from website owner panel'
+        row.expires_at=None
+
+    elif action=='vpn_bypass':
+        ip=(target.last_ip or '').strip()
+        if not ip:
+            raise HTTPException(400,'User has no recorded IP')
+        row=db.query(VPNAllowlist).filter(VPNAllowlist.ip==ip).first() or VPNAllowlist(ip=ip)
+        db.add(row)
+        row.note='Allowed from website owner panel'
+
+    elif action=='remove_vpn_bypass':
+        ip=(target.last_ip or '').strip()
+        if not ip:
+            raise HTTPException(400,'User has no recorded IP')
+        row=db.query(VPNAllowlist).filter(VPNAllowlist.ip==ip).first()
+        if row:
+            db.delete(row)
+
+    elif action=='make_pentester':
+        if target.role=='owner':
+            raise HTTPException(400,'Remove Owner access first')
+        target.role='pentester'
+
+    elif action=='remove_pentester':
+        if target.role=='pentester':
+            target.role='client'
+
+    elif action=='make_owner':
+        if not is_main_actor:
+            raise HTTPException(403,'Only the main owner can grant Owner access')
+        if is_main_target:
+            raise HTTPException(400,'Already main owner')
+        target.role='owner'
+        target.is_restricted=False
+        target.restricted_reason=None
+        target.temp_banned_until=None
+
+    elif action=='remove_owner':
+        if not is_main_actor:
+            raise HTTPException(403,'Only the main owner can remove Owner access')
+        if is_main_target:
+            raise HTTPException(403,'Main owner role cannot be removed')
+        if target.role=='owner':
+            target.role='client'
+
+    elif action=='delete':
+        if is_main_target:
+            raise HTTPException(403,'Main owner account cannot be deleted')
+        if target.role=='owner' and not is_main_actor:
+            raise HTTPException(403,'Only the main owner can delete another owner')
+
+        db.query(TicketMessage).filter(TicketMessage.sender_user_id==target.id).delete(synchronize_session=False)
+
+        owned=db.query(Ticket).filter(Ticket.owner_user_id==target.id).all()
+        for ticket in owned:
+            db.query(TicketMessage).filter(TicketMessage.ticket_id==ticket.id).delete(synchronize_session=False)
+            db.delete(ticket)
+
+        for ticket in db.query(Ticket).filter(Ticket.assigned_pentester_id==target.id).all():
+            ticket.assigned_pentester_id=None
+
+        for log in db.query(AuditLog).filter(AuditLog.actor_user_id==target.id).all():
+            log.actor_user_id=None
+
+        db.delete(target)
+
+    else:
+        raise HTTPException(400,'Unknown action')
+
+    db.commit()
+    return RedirectResponse('/api/dashboard',303)
 
 @app.get('/api/health')
 def health():
