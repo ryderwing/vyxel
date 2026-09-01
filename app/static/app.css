@@ -1,4 +1,3 @@
-<!-- if your seeing this twin get outa my source code -->
 :root{
   color-scheme:dark;
   --bg:#050505;
@@ -10,7 +9,7 @@
   --red:#e11d2e;
   --red-hover:#ff3045;
 }
-
+<!-- if your seeing this twin get outa my source code -->
 *{box-sizing:border-box}
 
 html,body{min-height:100%}
