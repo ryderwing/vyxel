@@ -66,6 +66,184 @@
       <div class="empty-state">No tickets yet.</div>
     {% endif %}
   </div>
+  {% if user.role == 'owner' %}
+  <div class="card members-card">
+    <div class="section-head">
+      <h2>Members</h2>
+      <span class="member-count">{{ members|length }} total</span>
+    </div>
+
+    {% if members %}
+      <div class="member-list">
+        {% for member in members %}
+          <div class="member-row">
+            <div class="member-avatar">
+              {{ member.display_name[0]|upper if member.display_name else 'U' }}
+            </div>
+
+            <div class="member-main">
+              <div class="member-name">
+                {{ member.display_name }}
+                {% if member.email|lower == user.email|lower %}
+                  <span class="you-badge">You</span>
+                {% endif %}
+              </div>
+              <div class="member-email">{{ member.email }}</div>
+            </div>
+
+            <div class="member-role">{{ member.role|capitalize }}</div>
+
+            <div class="member-status">
+              {% if member.is_restricted %}
+                <span class="member-badge danger-badge">Restricted</span>
+              {% elif member.temp_banned_until %}
+                <span class="member-badge warning-badge">Temp Banned</span>
+              {% else %}
+                <span class="member-badge">Active</span>
+              {% endif %}
+            </div>
+
+            <div class="member-options-wrap">
+              <button type="button" class="member-options-btn" onclick="toggleMemberOptions(this)">Options</button>
+
+              <div class="member-options-menu">
+                {% if member.temp_banned_until %}
+                <form method="post" action="/api/owner/users/{{ member.id }}/action">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="action" value="remove_temp_ban">
+                  <button type="submit">Remove Temp Ban</button>
+                </form>
+                {% else %}
+                <form method="post" action="/api/owner/users/{{ member.id }}/action" onsubmit="return addTempBanMinutes(this)">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="action" value="temp_ban">
+                  <input type="hidden" name="value" value="60">
+                  <button type="submit">Temp Ban</button>
+                </form>
+                {% endif %}
+
+                {% if member.is_restricted %}
+                <form method="post" action="/api/owner/users/{{ member.id }}/action">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="action" value="unrestrict">
+                  <button type="submit">Unrestrict From Site</button>
+                </form>
+                {% else %}
+                <form method="post" action="/api/owner/users/{{ member.id }}/action" onsubmit="return addRestrictionReason(this)">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="action" value="restrict">
+                  <input type="hidden" name="value" value="Restricted by owner">
+                  <button type="submit">Restrict From Site</button>
+                </form>
+                {% endif %}
+
+                <form method="post" action="/api/owner/users/{{ member.id }}/action" onsubmit="return confirm('IP ban this user?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="action" value="ip_ban">
+                  <button type="submit">IP Ban</button>
+                </form>
+
+                <form method="post" action="/api/owner/users/{{ member.id }}/action">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="action" value="vpn_bypass">
+                  <button type="submit">Allow VPN Bypass</button>
+                </form>
+
+                <form method="post" action="/api/owner/users/{{ member.id }}/action">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="action" value="remove_vpn_bypass">
+                  <button type="submit">Remove VPN Bypass</button>
+                </form>
+
+                {% if member.role == 'pentester' %}
+                <form method="post" action="/api/owner/users/{{ member.id }}/action">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="action" value="remove_pentester">
+                  <button type="submit">Remove Pentester</button>
+                </form>
+                {% elif member.role != 'owner' %}
+                <form method="post" action="/api/owner/users/{{ member.id }}/action">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="action" value="make_pentester">
+                  <button type="submit">Make Pentester</button>
+                </form>
+                {% endif %}
+
+                {% if user.email|lower == config_owner_email|default('')|lower %}
+                  {% if member.role == 'owner' and member.email|lower != user.email|lower %}
+                  <form method="post" action="/api/owner/users/{{ member.id }}/action" onsubmit="return confirm('Remove Owner access from this user?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                    <input type="hidden" name="action" value="remove_owner">
+                    <button type="submit">Remove Owner Access</button>
+                  </form>
+                  {% elif member.role != 'owner' %}
+                  <form method="post" action="/api/owner/users/{{ member.id }}/action" onsubmit="return confirm('Give this user Owner access?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                    <input type="hidden" name="action" value="make_owner">
+                    <button type="submit">Make Owner</button>
+                  </form>
+                  {% endif %}
+                {% endif %}
+
+                {% if member.email|lower != user.email|lower %}
+                <form method="post" action="/api/owner/users/{{ member.id }}/action" onsubmit="return confirmDeleteAccount()">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="action" value="delete">
+                  <button type="submit" class="member-danger-action">Delete Account</button>
+                </form>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No members found.</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
 </div>
+
+
+<script>
+function toggleMemberOptions(button){
+  document.querySelectorAll('.member-options-menu.open').forEach(function(menu){
+    if(menu !== button.nextElementSibling) menu.classList.remove('open');
+  });
+  button.nextElementSibling.classList.toggle('open');
+}
+
+function addTempBanMinutes(form){
+  var value = prompt('Temp ban length in minutes:', '60');
+  if(value === null) return false;
+  var minutes = parseInt(value, 10);
+  if(!Number.isFinite(minutes) || minutes < 1){
+    alert('Enter a valid number of minutes.');
+    return false;
+  }
+  form.querySelector('input[name="value"]').value = minutes;
+  return true;
+}
+
+function addRestrictionReason(form){
+  var value = prompt('Restriction reason:', 'Restricted by owner');
+  if(value === null) return false;
+  form.querySelector('input[name="value"]').value = value || 'Restricted by owner';
+  return true;
+}
+
+function confirmDeleteAccount(){
+  return confirm('Permanently delete this account and its tickets? This cannot be undone.');
+}
+
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.member-options-wrap')){
+    document.querySelectorAll('.member-options-menu.open').forEach(function(menu){
+      menu.classList.remove('open');
+    });
+  }
+});
+</script>
 
 {% endblock %}
